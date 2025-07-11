@@ -30,7 +30,7 @@ public class Main {
 			affectItemsSet.add(itemId);
 		}
 
-		if (ModConfig.displayMessageOnDrop) {
+		if (ModConfig.displayMessageOnDrop || ModConfig.displayMessageOnPickup) {
 			if (ModConfig.allowMainHand && ModConfig.allowOffHand) {
 				warningMessage = "You must hold this item in your main or off hand.";
 			} else if (ModConfig.allowMainHand) {
@@ -78,7 +78,7 @@ public class Main {
 			}
 
 			if (affectItemsSet.contains(itemResourceLocation.toString())) {
-				player.entityDropItem(stack.copy(), 0);
+				player.dropItem(stack.copy(), false);
 				player.inventory.setInventorySlotContents(inventorySlot, ItemStack.EMPTY);
 				if (ModConfig.displayMessageOnDrop) {
 					player.sendStatusMessage(new TextComponentString(warningMessage), true);
