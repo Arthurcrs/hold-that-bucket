@@ -6,9 +6,11 @@ import com.mahghuuuls.holdthatbucket.util.ModConfig;
 import com.mahghuuuls.holdthatbucket.util.ModReference;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -19,34 +21,32 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 @Mod(modid = ModReference.MOD_ID, name = ModReference.NAME, version = ModReference.VERSION)
 @Mod.EventBusSubscriber(modid = ModReference.MOD_ID)
 public class Main {
-	private static HashSet<String> restrictedItemsSet = new HashSet<>(); // TODO: Change this name..Also. Check if it is
-																			// really necessary, maybe the ModConfig can
-																			// initialize as a HashSet
+	private static HashSet<String> affectItemsSet = new HashSet<>();
 	private static String warningMessage;
 
 	@Mod.EventHandler
 	public void preInit(FMLPreInitializationEvent event) {
 		for (String itemId : ModConfig.restrictedItems) {
-			restrictedItemsSet.add(itemId);
+			affectItemsSet.add(itemId);
 		}
 
-		if (ModConfig.displayMessage) {
+		if (ModConfig.displayMessageOnDrop) {
 			if (ModConfig.allowMainHand && ModConfig.allowOffHand) {
-				warningMessage = "This item must be held in one of the hands";
+				warningMessage = "You must hold this item in your main or off hand.";
 			} else if (ModConfig.allowMainHand) {
-				warningMessage = "This item must be held in the main hand";
+				warningMessage = "You must hold this item in your main hand.";
 			} else if (ModConfig.allowOffHand) {
-				warningMessage = "This item must be held in the off hand";
+				warningMessage = "You must hold this item in your off hand.";
 			} else {
-				warningMessage = "This item can't cannot be in your inventory";
+				warningMessage = "This item cannot be held or placed anywhere in your inventory.";
 			}
 		}
 
 	}
 
 	/**
-	 * Every player tick scan the player whole inventory for items in the restricted
-	 * items list, if found the item, drop the stack
+	 * Every player tick scan the player whole inventory for the items in the list,
+	 * if found the item, drop the stack
 	 */
 	@SubscribeEvent
 	public static void checkInventoryForItems(TickEvent.PlayerTickEvent event) {
@@ -77,10 +77,10 @@ public class Main {
 				continue;
 			}
 
-			if (restrictedItemsSet.contains(itemResourceLocation.toString())) {
+			if (affectItemsSet.contains(itemResourceLocation.toString())) {
 				player.entityDropItem(stack.copy(), 0);
 				player.inventory.setInventorySlotContents(inventorySlot, ItemStack.EMPTY);
-				if (ModConfig.displayMessage) {
+				if (ModConfig.displayMessageOnDrop) {
 					player.sendStatusMessage(new TextComponentString(warningMessage), true);
 				}
 			}
@@ -88,8 +88,8 @@ public class Main {
 	}
 
 	/**
-	 * Ensures items in the list goes to the selected inventory slot or the off hand
-	 * slot
+	 * Ensures items can only be picked up when it goes to an allowed item slot
+	 * (main hand and/or off hand)
 	 */
 	@SubscribeEvent
 	public static void ensureHandSlotPickup(EntityItemPickupEvent event) {
@@ -103,20 +103,36 @@ public class Main {
 		if (itemResourceLocation == null) {
 			return;
 		}
-		// TODO: When the player is picking up the item in that way, for some reason the
-		// item pickup sound does not play
-		if (restrictedItemsSet.contains(itemResourceLocation.toString())) {
+
+		if (affectItemsSet.contains(itemResourceLocation.toString())) {
 			if (player.getHeldItemMainhand().isEmpty() && ModConfig.allowMainHand) {
 				player.setHeldItem(EnumHand.MAIN_HAND, itemStack);
+				playPickupSoundAtPlayer(player);
+				if (ModConfig.displayMessageOnPickup) {
+					player.sendStatusMessage(new TextComponentString(warningMessage), true);
+				}
 				event.getItem().setDead();
 				event.setCanceled(true);
 			} else if (player.getHeldItemOffhand().isEmpty() && ModConfig.allowOffHand) {
 				player.setHeldItem(EnumHand.OFF_HAND, itemStack);
+				playPickupSoundAtPlayer(player);
+				if (ModConfig.displayMessageOnPickup) {
+					player.sendStatusMessage(new TextComponentString(warningMessage), true);
+				}
 				event.getItem().setDead();
 				event.setCanceled(true);
 			} else {
 				event.setCanceled(true);
 			}
 		}
+	}
+
+	/**
+	 * Play the pickup sound at the player location with a random variation of pitch
+	 */
+	private static void playPickupSoundAtPlayer(EntityPlayer player) {
+		player.world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_ITEM_PICKUP,
+				SoundCategory.PLAYERS, 0.2F,
+				((player.getRNG().nextFloat() - player.getRNG().nextFloat()) * 0.7F + 1.0F) * 2.0F);
 	}
 }

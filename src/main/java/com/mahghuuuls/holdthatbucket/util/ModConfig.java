@@ -13,13 +13,15 @@ public final class ModConfig {
 	@Config.RequiresMcRestart
 	public static boolean allowOffHand = true;
 
-	@Config.Comment("Display message when the item is dropped from the player inventory")
+	@Config.Comment("Display a message when the item is dropped from the player inventory")
 	@Config.RequiresMcRestart
-	public static boolean displayMessage = true;
+	public static boolean displayMessageOnDrop = true;
+
+	@Config.Comment("Display a message when the item is picked up")
+	@Config.RequiresMcRestart
+	public static boolean displayMessageOnPickup = false;
 
 	@Config.Comment("List of registry names of items that this mod affects")
 	@Config.RequiresMcRestart
-	public static String[] restrictedItems = new String[] { "minecraft:dirt" }; // TODO: Is it possible for this to
-																				// initialize as a hashset?
-
+	public static String[] restrictedItems = new String[] { "minecraft:water_bucket", "minecraft:lava_bucket" };
 }
