@@ -2,7 +2,7 @@
 {
   "modid": "hold-that-bucket",
   "name": "Hold that Bucket!",
-  "description": "Allows adding items in the config that can only be held in the off hand and main hand (selected slot once grabbing the item)",
+  "description": "Allows adding items in the config that can only be held in the off hand and/or main hand",
   "version": "${version}",
   "mcversion": "${mcversion}",
   "url": "",

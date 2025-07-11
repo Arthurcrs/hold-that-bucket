@@ -9,6 +9,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -18,13 +19,29 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 @Mod(modid = ModReference.MOD_ID, name = ModReference.NAME, version = ModReference.VERSION)
 @Mod.EventBusSubscriber(modid = ModReference.MOD_ID)
 public class Main {
-	private static HashSet<String> restrictedItemsSet = new HashSet<>(); // TODO: Change this name..
+	private static HashSet<String> restrictedItemsSet = new HashSet<>(); // TODO: Change this name..Also. Check if it is
+																			// really necessary, maybe the ModConfig can
+																			// initialize as a HashSet
+	private static String warningMessage;
 
 	@Mod.EventHandler
 	public void preInit(FMLPreInitializationEvent event) {
 		for (String itemId : ModConfig.restrictedItems) {
 			restrictedItemsSet.add(itemId);
 		}
+
+		if (ModConfig.displayMessage) {
+			if (ModConfig.allowMainHand && ModConfig.allowOffHand) {
+				warningMessage = "This item must be held in one of the hands";
+			} else if (ModConfig.allowMainHand) {
+				warningMessage = "This item must be held in the main hand";
+			} else if (ModConfig.allowOffHand) {
+				warningMessage = "This item must be held in the off hand";
+			} else {
+				warningMessage = "This item can't cannot be in your inventory";
+			}
+		}
+
 	}
 
 	/**
@@ -41,11 +58,17 @@ public class Main {
 
 		int mainHandSlot = player.inventory.currentItem;
 
-		for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
-			if (i == mainHandSlot || i == 40) {
-				continue; // allow main hand and off hand
+		for (int inventorySlot = 0; inventorySlot < player.inventory.getSizeInventory(); inventorySlot++) {
+
+			if (inventorySlot == mainHandSlot && ModConfig.allowMainHand) {
+				continue;
 			}
-			ItemStack stack = player.inventory.getStackInSlot(i);
+
+			if (inventorySlot == 40 && ModConfig.allowOffHand) {
+				continue;
+			}
+
+			ItemStack stack = player.inventory.getStackInSlot(inventorySlot);
 			if (stack.isEmpty()) {
 				continue;
 			}
@@ -56,9 +79,10 @@ public class Main {
 
 			if (restrictedItemsSet.contains(itemResourceLocation.toString())) {
 				player.entityDropItem(stack.copy(), 0);
-				player.inventory.setInventorySlotContents(i, ItemStack.EMPTY);
-				// TODO: Add message to the player informing that the item must be held in one
-				// hand
+				player.inventory.setInventorySlotContents(inventorySlot, ItemStack.EMPTY);
+				if (ModConfig.displayMessage) {
+					player.sendStatusMessage(new TextComponentString(warningMessage), true);
+				}
 			}
 		}
 	}
@@ -82,11 +106,11 @@ public class Main {
 		// TODO: When the player is picking up the item in that way, for some reason the
 		// item pickup sound does not play
 		if (restrictedItemsSet.contains(itemResourceLocation.toString())) {
-			if (player.getHeldItemMainhand().isEmpty()) {
+			if (player.getHeldItemMainhand().isEmpty() && ModConfig.allowMainHand) {
 				player.setHeldItem(EnumHand.MAIN_HAND, itemStack);
 				event.getItem().setDead();
 				event.setCanceled(true);
-			} else if (player.getHeldItemOffhand().isEmpty()) {
+			} else if (player.getHeldItemOffhand().isEmpty() && ModConfig.allowOffHand) {
 				player.setHeldItem(EnumHand.OFF_HAND, itemStack);
 				event.getItem().setDead();
 				event.setCanceled(true);
